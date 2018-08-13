@@ -3,7 +3,9 @@ from unittest import main, TestCase
 import gzip
 import tempfile
 
-from spectrify.utils.s3 import S3GZipCSVReader, get_csv_reader
+import unicodecsv
+
+from spectrify.utils.s3 import S3GZipCSVReader
 
 
 class FakeS3Config(object):
@@ -11,40 +13,28 @@ class FakeS3Config(object):
         self.fileobj = fileobj
 
     def fs_open(self, *args, **kwargs):
+        self.fileobj.seek(0)
         return self.fileobj
 
 
 class TestUtilsS3CSVReader(TestCase):
-    def setUp(self):
-        self.unicode_csv_lines = [
-            u"name,age,sex",
-            u"Nir,31,M",
-            u"ניר,31,M"
-        ]
-        self.encoded_csv_lines = [
+    def test_s3_gzip_csv_reader(self):
+        encoded_csv_lines = [
             ['name', 'age', 'sex'],
             ['Nir', '31', 'M'],
-            ['ניר', '31', 'M']
+            ['ניר', '31', 'M'],
+            ["Martin von Löwis", '31', 'M'],
+            ["Marc André Lemburg", '31', 'M'],
+            ["François Pinard", '31', 'M']
         ]
-
-    def test_get_csv_reader(self):
-        self.assertEquals(
-            self.encoded_csv_lines,
-            list(get_csv_reader(self.unicode_csv_lines))
-        )
-
-    def test_s3_gzip_csv_reader(self):
         gzip_csv = tempfile.TemporaryFile()
         with gzip.GzipFile(fileobj=gzip_csv, mode="wb") as _gzip:
-            _gzip.write("\n".join(self.unicode_csv_lines).encode('utf-8'))
-
-        gzip_csv.seek(0)
+            w = unicodecsv.writer(_gzip, encoding="utf-8")
+            w.writerows(encoded_csv_lines)
 
         fake_s3_config = FakeS3Config(gzip_csv)
-        self.assertEquals(
-            self.encoded_csv_lines,
-            list(S3GZipCSVReader(fake_s3_config, ""))
-        )
+        with S3GZipCSVReader(fake_s3_config, "") as s3_gzip_csv_reader:
+            self.assertEqual(encoded_csv_lines, list(s3_gzip_csv_reader))
 
 
 if __name__ == "__main__":

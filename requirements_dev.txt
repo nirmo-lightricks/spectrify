@@ -11,3 +11,4 @@ pandas==0.23.4
 PyYAML==3.13
 pytest==3.7.1
 pytest-runner==4.2
+unicodecsv==0.14.1

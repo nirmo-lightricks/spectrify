@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function
 from future.standard_library import install_aliases
 install_aliases()  # noqa
 
-import csv
 import sys
+import csv #import unicodecsv as csv
 from gzip import GzipFile
 from io import TextIOWrapper
 from urllib.parse import urlparse
@@ -105,6 +105,10 @@ class S3GZipCSVReader:
 
 def get_csv_reader(iterable, **kwargs):
     if sys.version_info[0] < 3:
-        return csv.reader((row.encode('utf-8') for row in iterable), **kwargs)
+        return csv.reader(rows_to_utf8(iterable), **kwargs)
 
     return csv.reader(iterable, **kwargs)
+
+def rows_to_utf8(iterable):
+    for row in iterable:
+        yield row.encode('utf-8')
